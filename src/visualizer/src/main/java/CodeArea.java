@@ -3,6 +3,7 @@ import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
 import javax.swing.text.Highlighter;
+import javax.swing.text.DefaultCaret;
 import java.awt.Font;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -16,15 +17,20 @@ public class CodeArea extends JTextArea
 	private HashSet<Method> methods = new HashSet<Method>();
 	ArrayList<Instruction> description;
 	ArrayList<Integer> rowToIndex; //Since some Jimple indices can be missing, we need to store an offset
+    
+    private int currentCaret=0;
 	
 	public CodeArea()
 	{
 		this.setFont(Parameters.font);
-		System.out.println("Initializing empty code area");
+//		System.out.println("Initializing empty code area");
 		this.setEditable(false);
 		description = new ArrayList<Instruction>();
 		rowToIndex = new ArrayList<Integer>();
-		
+        
+        
+        ((DefaultCaret)this.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+        
 		this.addMouseListener
 		(
 			new MouseListener()
@@ -35,16 +41,16 @@ public class CodeArea extends JTextArea
 					Font font = CodeArea.this.getFont();
 					int lineHeight = CodeArea.this.getFontMetrics(font).getHeight();
 					int row = y/lineHeight;
-
+                     
 					if(e.isShiftDown())
 					{
 						if(row >= 0 && row < rowToIndex.size())
 						{
 							Instruction line = description.get(rowToIndex.get(row));
-							System.out.println("Instruction selected on row " + row + ", " + line.str);
+							//System.out.println("Instruction selected on row " + row + ", " + line.str);
 							if(line.isInstr)
 							{
-								if(line.isHighlighted)
+								if(line.isSelected)
 								{
 									CodeArea.this.searchByJimpleIndex(line.methodName, line.jimpleIndex, false);
 								}
@@ -58,17 +64,14 @@ public class CodeArea extends JTextArea
 					}
 					else
 					{
-						Highlighter h = CodeArea.this.getHighlighter();
-						h.removeAllHighlights();
-						Main.graph.clearHighlights();
+						//Main.graph.clearHighlights();
+                        Main.graph.clearSelects();
 					
 						if(row >= 0 && row < rowToIndex.size())
 						{
 							Instruction line = description.get(rowToIndex.get(row));
 							if(line.isInstr)
 							{
-								CodeArea.this.drawLineHighlight(row, Parameters.colorSelection);
-								
 								Parameters.vertexHighlight = true;
 								CodeArea.this.searchByJimpleIndex(line.methodName, line.jimpleIndex, true);
 							}
@@ -101,11 +104,16 @@ public class CodeArea extends JTextArea
 			if(v.getMethodName().contains(method) && v.jimpleIndex == index)
 			{
 				if(addHighlight)
-					v.addHighlight(true, true, true);
+                {
+					v.addHighlight(true, false, true, true);
+                }
 				else
-					v.clearAllHighlights();
+					v.clearAllSelect();
+//					v.clearAllHighlights();
 			}
 		}
+        if(addHighlight)
+            Parameters.ping();
 	}
 
 	public void clear()
@@ -147,8 +155,10 @@ public class CodeArea extends JTextArea
 		
 		this.computeDescriptionIndex();
 		this.writeText();
-		this.drawHighlights(Parameters.colorSelection, Parameters.colorFocus);
-		this.setCaretPosition(0);
+		this.drawHighlights(Parameters.colorSelection, Parameters.colorFocus, Parameters.colorHighlight);
+
+//		this.setCaretPosition(0);
+//        this.fixCaretPosition();
 	}
 	
 	private void computeDescriptionIndex()
@@ -174,14 +184,54 @@ public class CodeArea extends JTextArea
 		
 		this.setText(fullText.toString());
 	}
+    
+    
+    public void fixCaretPosition()
+    {
+        try
+        {
+            int line = this.getLineOfOffset(this.getCaretPosition());
+//            int line = this.getLineOfOffset(this.currentCaret);
+            int close = -1;
+            int dist1, dist2;
+            
+            for(int i = 0; i < this.description.size(); i++)
+            {
+                if(!this.description.get(i).isSelected)
+                    continue;
+                
+                dist1 = line - close;
+                dist2 = line - i;
+                
+                if(dist2*dist2 < dist1*dist1 || !this.description.get(line).isSelected)
+                    close = i;
+            }
+            
+            if(close>=0)
+            {
+                this.setCaretPosition(this.getLineStartOffset(close));
+            }
+        }
+        catch(BadLocationException ex)
+        {
+            System.out.println("doc = "+CodeArea.this.getText());
+            System.out.println(ex);
+        }
+
+    }
+    
 	
-	private void drawHighlights(Color c1, Color c2)
+	private void drawHighlights(Color c1, Color c2, Color c3)
 	{
+        Highlighter h = CodeArea.this.getHighlighter();
+        h.removeAllHighlights();
 		for(int i = 0; i < this.description.size(); i++)
 		{
 			//TODO: Find new color for applying both highlights?
 			Instruction line = this.description.get(i);
-			if(line.isHighlighted)
+            if(line.isSelected)
+                this.drawLineHighlight(i, c3);
+			else if(line.isHighlighted)
 				this.drawLineHighlight(i, c1);
 			else if(line.isCycleHighlighted)
 				this.drawLineHighlight(i, c2);

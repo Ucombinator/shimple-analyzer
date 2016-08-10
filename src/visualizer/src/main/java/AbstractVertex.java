@@ -1,4 +1,5 @@
 
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.util.ArrayList;
 
 //The base class for the various kinds of vertices.
@@ -38,14 +39,15 @@ public abstract class AbstractVertex
 	//to create its incoming edges.
 	protected AbstractVertex parent, mergeRoot;
 	protected boolean isVisible, mergeable;
-	protected boolean isHighlighted, isIncomingHighlighted, isOutgoingHighlighted; //Highlight this vertex, incoming edges, or outgoing edges
+	protected boolean isSelected, isHighlighted, isIncomingHighlighted, isOutgoingHighlighted; //Select or Highlight this vertex, incoming edges, or outgoing edges
 	protected boolean drawEdges;
-	protected int numChildrenHighlighted;
+	protected int numChildrenHighlighted, numChildrenSelected;
 	protected int loopHeight;
 	
 	//Subclasses must override these so that we have descriptions for each of them,
 	//and so that our generic collapsing can work for all of them
 	abstract String getRightPanelContent();
+    abstract String getShortDescription();
 	abstract AbstractVertex getMergeParent();
 	abstract ArrayList<? extends AbstractVertex> getMergeChildren();
 	abstract String getName();
@@ -66,6 +68,13 @@ public abstract class AbstractVertex
 		this.y = -0.5;
 	}
 	
+    
+    public DefaultMutableTreeNode toDefaultMutableTreeNode()
+    {
+//        return new DefaultMutableTreeNode(this.getShortDescription());
+        return new DefaultMutableTreeNode(this);
+    }
+    
     public void addTag(int t)
     {
         for(Integer i : this.tags)
@@ -74,6 +83,16 @@ public abstract class AbstractVertex
                 return;
         }
         this.tags.add(new Integer(t));
+    }
+    
+    public boolean hasTag(int t)
+    {
+        for(Integer i : this.tags)
+        {
+            if(i.intValue()==t)
+                return true;
+        }
+        return false;
     }
     
 	public double distTo(double x, double y)
@@ -383,9 +402,11 @@ public abstract class AbstractVertex
 		}
 	}
 	
-	public void addHighlight(boolean vertex, boolean to, boolean from)
+	public void addHighlight(boolean select, boolean vertex, boolean to, boolean from)
 	{
 		//System.out.println("Highlighting vertex: " + this.getFullName());
+		if(select)
+			this.isSelected = true;
 		if(vertex)
 			this.isHighlighted = true;
 		if(to)
@@ -396,6 +417,10 @@ public abstract class AbstractVertex
 		AbstractVertex v = this.getMergeParent();
 		while(v != null)
 		{
+			if(select)
+			{
+				v.numChildrenSelected++;
+			}
 			if(vertex)
 			{
 				v.numChildrenHighlighted++;
@@ -420,11 +445,58 @@ public abstract class AbstractVertex
 		return this.isHighlighted;
 	}
 	
+	
 	public boolean isChildHighlighted()
 	{
 		//System.out.println("Highlighted children for vertex: " + this.getFullName() + " = " + this.numChildrenHighlighted);
 		return this.numChildrenHighlighted > 0;
 	}
+	
+    public boolean isParentHighlighted()
+    {
+        AbstractVertex ver = this;
+        
+        while(ver !=null)
+        {
+            if(ver.isHighlighted)
+                return true;
+            ver = ver.getMergeParent();
+        }
+        return false;
+    }
+    
+    public boolean isBranchHighlighted()
+    {
+        return this.isHighlighted() | this.isParentHighlighted() | this.isChildHighlighted();
+    }
+    
+	public boolean isSelected()
+	{
+		return this.isSelected;
+	}
+	
+	public boolean isChildSelected()
+	{
+		return this.numChildrenSelected > 0;
+	}
+    
+    public boolean isParentSelected()
+    {
+        AbstractVertex ver = this;
+        
+        while(ver !=null)
+        {
+            if(ver.isSelected)
+                return true;
+            ver = ver.getMergeParent();
+        }
+        return false;
+    }
+    
+    public boolean isBranchSelected()
+    {
+        return this.isSelected() | this.isParentSelected() | this.isChildSelected();
+    }
 	
 	public void clearAllHighlights()
 	{
@@ -439,6 +511,23 @@ public abstract class AbstractVertex
 		}
 
 		this.isHighlighted = false;
+		this.isIncomingHighlighted = false;
+		this.isOutgoingHighlighted = false;
+	}
+	
+	public void clearAllSelect()
+	{
+		if(this.isSelected)
+		{
+			AbstractVertex v = this.getMergeParent();
+			while(v != null)
+			{
+				v.numChildrenSelected--;
+				v = v.getMergeParent();
+			}
+		}
+
+		this.isSelected = false;
 		this.isIncomingHighlighted = false;
 		this.isOutgoingHighlighted = false;
 	}

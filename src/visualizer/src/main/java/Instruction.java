@@ -8,6 +8,7 @@ public class Instruction
 	public int jimpleIndex;
 	public boolean isCycleHighlighted;
 	public boolean isHighlighted;
+    public boolean isSelected;
 
 	public int startIndex;
 	public int endIndex;
@@ -19,6 +20,8 @@ public class Instruction
 		this.isInstr = false;
 		this.jimpleIndex = -1;
 		this.isHighlighted = false;
+        this.isCycleHighlighted = false;
+        this.isSelected = false;
 		this.startIndex = -1;
 		this.endIndex = -1;
 	}
@@ -30,6 +33,8 @@ public class Instruction
 		this.isInstr = isInstr;
 		this.jimpleIndex = jimpleIndex;
 		this.isHighlighted = false;
+        this.isCycleHighlighted = false;
+        this.isSelected = false;
 		this.startIndex = -1;
 		this.endIndex = -1;
 	}

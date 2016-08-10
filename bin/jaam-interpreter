@@ -13,4 +13,4 @@ chosen_java_opts=${JAVA_OPTS:-"${JAAM_java_opts}"}
 JAVA_OPTS="${chosen_java_opts}"
 
 # Do the execution.
-exec "${JAAM_java}" -jar "${JAAM_interpreter}" -J "${JAAM_rt_jar}" "$@"
+exec "${JAAM_java}" -Xss16M -jar "${JAAM_interpreter}" -J "${JAAM_rt_jar}" "$@"

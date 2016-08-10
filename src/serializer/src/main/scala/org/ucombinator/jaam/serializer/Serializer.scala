@@ -10,13 +10,16 @@ import java.io.{InputStream, OutputStream, IOException}
 import java.lang.reflect.Type
 import java.util.zip.{DeflaterOutputStream, InflaterInputStream}
 
+import scala.collection.JavaConversions._
+
 import soot.SootMethod
 import soot.jimple.{Stmt => SootStmt}
 import soot.util.Chain
+import org.objectweb.asm.tree.{InsnList, AbstractInsnNode}
 
 import com.esotericsoftware.minlog.Log
 
-import com.esotericsoftware.kryo.{Kryo, Registration}
+import com.esotericsoftware.kryo.{Kryo, Registration, Serializer}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.esotericsoftware.kryo.serializers.FieldSerializer
 
@@ -284,5 +287,61 @@ class JaamKryo extends KryoBase {
     }
 
     r
+  }
+
+  // Serializer for InsnList that avoids stack overflows due to recursively
+  // following AbstractInsnNode.next.  This works on concert with
+  // AbstractInsnNodeSerializer.
+  class InsnListSerializer() extends Serializer[InsnList] {
+    override def write(kryo : Kryo, output : Output, collection : InsnList) {
+      output.writeVarInt(collection.size(), true)
+      for (element <- collection.iterator)
+        kryo.writeClassAndObject(output, element);
+    }
+
+    override def read(kryo : Kryo, input : Input, typ : Class[InsnList]) : InsnList = {
+      val collection = new InsnList()
+      kryo.reference(collection)
+      val length = input.readVarInt(true)
+      for (i <- Seq.range(0, length))
+        collection.add(kryo.readClassAndObject(input).asInstanceOf[AbstractInsnNode])
+      return collection
+    }
+  }
+
+  override def newDefaultSerializer(typ : Class[_]) : Serializer[_] = {
+    if (classOf[InsnList] == typ)
+      // We can't use addDefaultSerializer due to shading in the assembly
+      new InsnListSerializer()
+    else if (classOf[AbstractInsnNode].isAssignableFrom(typ)) {
+      // Subclasses of AbstractInsnNode should not try to serialize prev or
+      // next. However, this requires working around a bug in
+      // rebuildCachedFields. (See AbstractInsnNodeSerializer.)
+      val s = new AbstractInsnNodeSerializer(this, typ)
+      s.removeField("prev")
+      s.removeField("next")
+      s
+    } else {
+      super.newDefaultSerializer(typ)
+    }
+  }
+
+  // FieldSerializer.rebuildCachedFields has bugs relating to removed fields.
+  // The following implementation works around these
+  class AbstractInsnNodeSerializer(kryo : Kryo, typ : Class[_])
+      extends FieldSerializer(this, typ) {
+    override def rebuildCachedFields(minorRebuild : Boolean) {
+      // Save and clear removedFields since the below calls to removeField
+      // will repopulate it.  Otherwise, we get a ConcurentModificationException.
+      val removed = this.removedFields
+      if (!minorRebuild)
+        this.removedFields = new java.util.HashSet()
+      super.rebuildCachedFields(minorRebuild)
+      if (!minorRebuild)
+        for (field <- removed)
+          // Make sure to use toString otherwise you call a version of
+          // removeField that uses pointer equality and thus no effect
+          removeField(field.toString)
+    }
   }
 }

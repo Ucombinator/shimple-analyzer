@@ -36,6 +36,7 @@ import javax.swing.JComboBox;
 import javax.swing.KeyStroke;
 import javax.swing.JLabel;
 import javax.swing.JButton;
+import javax.swing.text.DefaultCaret;
 
 
 /**
@@ -51,13 +52,13 @@ public class StacFrame extends JFrame
 	private int width, height;
 	private JSplitPane centerSplitPane;
 	public VizPanel vizPanel, contextPanel;
-	private JPanel menuPanel, leftPanel, rightPanel;
+	private JPanel menuPanel, leftPanel, rightPanel, searchPanel;
 	public JCheckBox showContext, showEdge;
 	private boolean context = false, mouseDrag = false;
 	
 	public enum searchType
 	{
-		ID, INSTRUCTION, METHOD, ALL_LEAVES, ALL_SOURCES, OUT_OPEN, OUT_CLOSED, IN_OPEN, IN_CLOSED, ROOT_PATH
+		ID, TAG, INSTRUCTION, METHOD, ALL_LEAVES, ALL_SOURCES, OUT_OPEN, OUT_CLOSED, IN_OPEN, IN_CLOSED, ROOT_PATH
 	}
 	
 	public StacFrame()
@@ -138,7 +139,7 @@ public class StacFrame extends JFrame
 				}
 		);
 
-		JMenuItem searchByInst = new JMenuItem("by Instruction");
+		JMenuItem searchByInst = new JMenuItem("by Statement");
 		menuSearch.add(searchByInst);
 		searchByInst.addActionListener
 		(
@@ -156,16 +157,32 @@ public class StacFrame extends JFrame
 		menuSearch.add(searchByMethod);
 		searchByMethod.addActionListener
 		(
-				new ActionListener()
-				{
-					public void actionPerformed(ActionEvent ev)
-					{
-						searchAndHighlight(searchType.METHOD);
-						Parameters.repaintAll();
-					}
-				}
+            new ActionListener()
+            {
+                public void actionPerformed(ActionEvent ev)
+                {
+                    searchAndHighlight(searchType.METHOD);
+                    Parameters.repaintAll();
+                }
+            }
 		);
 
+        JMenuItem searchTags = new JMenuItem("Allocation Tags");
+        menuSearch.add(searchTags);
+        searchTags.addActionListener
+        (
+            new ActionListener()
+            {
+                public void actionPerformed(ActionEvent ev)
+                {
+                    searchAndHighlight(searchType.TAG);
+                    Parameters.repaintAll();
+                }
+            }
+        );
+        searchTags.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_T, 0));
+        
+        
 		JMenuItem searchLeaves = new JMenuItem("All leaves");
 		menuSearch.add(searchLeaves);
 		searchLeaves.addActionListener
@@ -626,26 +643,29 @@ public class StacFrame extends JFrame
 	
 	public void setSplitScreen()
 	{
-//		System.out.println("Setting split screen");
-
 		centerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
 		JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
-		JSplitPane rightSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
+		JSplitPane vizSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
 		centerSplitPane.setLeftComponent(leftSplitPane);
-		centerSplitPane.setRightComponent(rightSplitPane);
+		centerSplitPane.setRightComponent(vizSplitPane);
+        vizSplitPane.setRightComponent(rightSplitPane);
 		this.getContentPane().add(this.centerSplitPane, BorderLayout.CENTER);
 		
 		centerSplitPane.setOneTouchExpandable(true);
-		leftSplitPane.setOneTouchExpandable(true);		
+		leftSplitPane.setOneTouchExpandable(true);
+        vizSplitPane.setOneTouchExpandable(true);
 		rightSplitPane.setOneTouchExpandable(true);
 		
 		leftPanel = new JPanel();
 		leftSplitPane.setLeftComponent(leftPanel);
 		rightPanel = new JPanel();
-		rightSplitPane.setRightComponent(rightPanel);
+        rightSplitPane.setLeftComponent(rightPanel);
+        searchPanel = new JPanel();
+		rightSplitPane.setRightComponent(searchPanel);
 
 		this.vizPanel = new VizPanel(this, false);
-		rightSplitPane.setLeftComponent(this.vizPanel);
+		vizSplitPane.setLeftComponent(this.vizPanel);
 		this.contextPanel = new VizPanel(this,true);
 		leftSplitPane.setRightComponent(this.contextPanel);
 
@@ -660,22 +680,87 @@ public class StacFrame extends JFrame
 		JLabel rightL = new JLabel("Description", JLabel.CENTER);
 		Parameters.rightArea = new JTextArea();
 		Parameters.rightArea.setEditable(false);
+        ((DefaultCaret)Parameters.rightArea.getCaret()).setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
 		rightPanel.setLayout(new BorderLayout());
 		rightPanel.add(rightL, BorderLayout.NORTH);
 		JScrollPane scrollR = new JScrollPane (Parameters.rightArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		rightPanel.add(scrollR, BorderLayout.CENTER);
 		rightPanel.setFont(Parameters.font);
 		
-		double rw1 = 0.2, rw2 = 0.75, rw3 = 0.6;
+        JLabel searchL = new JLabel("Search Results", JLabel.CENTER);
+        Parameters.searchArea = new SearchArea();
+        searchPanel.setLayout(new BorderLayout());
+        searchPanel.add(searchL,BorderLayout.NORTH);
+        JScrollPane scrollS = new JScrollPane (Parameters.searchArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        searchPanel.add(scrollS, BorderLayout.CENTER);
+        searchPanel.setFont(Parameters.font);
+        
+		double rw1 = 0.2, rw2 = 0.75, rw3 = 0.6, rw4 = 0.6;
 		centerSplitPane.setResizeWeight(rw1);
-		rightSplitPane.setResizeWeight(rw2);
+		vizSplitPane.setResizeWeight(rw2);
 		leftSplitPane.setResizeWeight(rw3);
+        rightSplitPane.setResizeWeight(rw4);
 		
 		centerSplitPane.resetToPreferredSizes();
-		rightSplitPane.resetToPreferredSizes();
+        vizSplitPane.resetToPreferredSizes();
 		leftSplitPane.resetToPreferredSizes();
+        rightSplitPane.resetToPreferredSizes();
 	}
 	
+    
+    ///modified
+    public void setSplitScreenold()
+    {
+        //		System.out.println("Setting split screen");
+        
+        centerSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
+        JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
+        JSplitPane rightSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, true);
+        centerSplitPane.setLeftComponent(leftSplitPane);
+        centerSplitPane.setRightComponent(rightSplitPane);
+        this.getContentPane().add(this.centerSplitPane, BorderLayout.CENTER);
+        
+        centerSplitPane.setOneTouchExpandable(true);
+        leftSplitPane.setOneTouchExpandable(true);
+        rightSplitPane.setOneTouchExpandable(true);
+        
+        leftPanel = new JPanel();
+        leftSplitPane.setLeftComponent(leftPanel);
+        rightPanel = new JPanel();
+        rightSplitPane.setRightComponent(rightPanel);
+        
+        this.vizPanel = new VizPanel(this, false);
+        rightSplitPane.setLeftComponent(this.vizPanel);
+        this.contextPanel = new VizPanel(this,true);
+        leftSplitPane.setRightComponent(this.contextPanel);
+        
+        JLabel leftL = new JLabel("Context", JLabel.CENTER);
+        Parameters.leftArea = new CodeArea();
+        leftPanel.setLayout(new BorderLayout());
+        leftPanel.add(leftL,BorderLayout.NORTH);
+        JScrollPane scrollL = new JScrollPane (Parameters.leftArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        leftPanel.add(scrollL, BorderLayout.CENTER);
+        leftPanel.setFont(Parameters.font);
+        
+        JLabel rightL = new JLabel("Description", JLabel.CENTER);
+        Parameters.rightArea = new JTextArea();
+        Parameters.rightArea.setEditable(false);
+        rightPanel.setLayout(new BorderLayout());
+        rightPanel.add(rightL, BorderLayout.NORTH);
+        JScrollPane scrollR = new JScrollPane (Parameters.rightArea, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        rightPanel.add(scrollR, BorderLayout.CENTER);
+        rightPanel.setFont(Parameters.font);
+        
+        double rw1 = 0.2, rw2 = 0.75, rw3 = 0.6;
+        centerSplitPane.setResizeWeight(rw1);
+        rightSplitPane.setResizeWeight(rw2);
+        leftSplitPane.setResizeWeight(rw3);
+        
+        centerSplitPane.resetToPreferredSizes();
+        rightSplitPane.resetToPreferredSizes();
+        leftSplitPane.resetToPreferredSizes();
+    }
+    
 	public void loadGraph(boolean fromMessages)
 	{
 		File file = Parameters.openFile(false);
@@ -709,7 +794,7 @@ public class StacFrame extends JFrame
 		}
 
 		String input = "";
-		if(search != searchType.ALL_LEAVES && search != searchType.ALL_SOURCES)
+		if(search != searchType.ALL_LEAVES && search != searchType.ALL_SOURCES && search != searchType.TAG)
 		{
 			input = JOptionPane.showInputDialog(null, title);
 			if(input == null)
@@ -727,7 +812,8 @@ public class StacFrame extends JFrame
 
 		Parameters.highlightOutgoing = search != searchType.OUT_OPEN;
 		Parameters.highlightIncoming = search != searchType.IN_OPEN;
-	}
+    
+    }
 	
 	public boolean isGraphLoaded()
 	{
@@ -761,16 +847,19 @@ public class StacFrame extends JFrame
 								AbstractVertex ver = Main.graph.getVertexNearestCoordinate(x, y);
 								if(ver != null)
 								{
-									if(ver.isHighlighted())
+//									if(ver.isHighlighted())
+									if(ver.isSelected())
 									{
-										ver.clearAllHighlights();
+//										ver.clearAllHighlights();
+										ver.clearAllSelect();
 										Main.graph.redoCycleHighlights();
 									}
 									else
 									{
-										ver.addHighlight(true, true, true);
+										ver.addHighlight(true, false, true, true);
 										if(ver.vertexType == AbstractVertex.VertexType.LINE)
 											((Vertex) ver).highlightCycles();
+                                        Parameters.ping();
 									}
 								}
 							}
@@ -778,16 +867,18 @@ public class StacFrame extends JFrame
 							{
 								AbstractVertex ver = Main.graph.getVertexNearestCoordinate(x, y);
 								Parameters.leftArea.clear();
-								Main.graph.clearHighlights();
+                                Main.graph.clearSelects();
 
 								if(ver != null)
 								{
 									Parameters.highlightIncoming = true;
 									Parameters.highlightOutgoing = true;
 									Parameters.vertexHighlight = true;
-									ver.addHighlight(true, true, true);
+									ver.addHighlight(true, false, true, true);
 									if(ver.vertexType == AbstractVertex.VertexType.LINE)
 										((Vertex) ver).highlightCycles();
+                                    Parameters.ping();
+                                    Parameters.fixCaretPositions();
 								}
 							}
 							

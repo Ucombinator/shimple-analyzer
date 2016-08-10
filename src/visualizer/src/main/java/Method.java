@@ -123,6 +123,7 @@ public class Method
 		{
 			inst.isHighlighted = false;
 			inst.isCycleHighlighted = false;
+            inst.isSelected = false;
 		}
 		
 		for(Vertex v : this.vertices)
@@ -140,6 +141,11 @@ public class Method
 					this.instructionList.get(v.jimpleIndex).isCycleHighlighted = true;
 					//System.out.println("Cycle highlighting " + v.jimpleIndex + ", " + v.getMethodName());
 				}
+
+                if(v.isSelected())
+                {
+                    this.instructionList.get(v.jimpleIndex).isSelected = true;
+                }
 			}
 		}
 	}

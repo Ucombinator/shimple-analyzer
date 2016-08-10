@@ -3,7 +3,7 @@
 : ${SBT_JAVA:="java"}
 
 # -XX:MaxPermSize=256M is deprecated in Java 8 but required in Java 7 so we have to check
-if ${SBT_JAVA} -XX:MaxPermSize=256M -version 2>&1 |grep 'ignoring option MaxPermSize'; then
+if "${SBT_JAVA}" -XX:MaxPermSize=256M -version 2>&1 |grep 'ignoring option MaxPermSize'; then
 : ${SBT_OPTS:="-Xms512M -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled"}
 else
 : ${SBT_OPTS:="-Xms512M -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256M"}

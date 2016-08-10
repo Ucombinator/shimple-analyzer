@@ -154,10 +154,16 @@ public class VizPanel extends JPanel
 		y1 = (int) this.getPixelYFromIndex(y1temp);
 		y2 = (int) this.getPixelYFromIndex(y2temp);
 		
-		if(Parameters.vertexHighlight && (ver.isHighlighted() || ver.isChildHighlighted()))
+		if(Parameters.vertexHighlight && (ver.isSelected() || ver.isChildSelected()))
 		{
 			//System.out.println("Drawing highlighted vertex: " + ver.id);
 			g.setColor(Parameters.colorHighlight);
+			g.fillRect(x1, y1, x2 - x1, y2 - y1);
+		}
+		else if(Parameters.vertexHighlight && (ver.isHighlighted() || ver.isChildHighlighted()))
+		{
+			//System.out.println("Drawing highlighted vertex: " + ver.id);
+			g.setColor(Parameters.colorSelection);
 			g.fillRect(x1, y1, x2 - x1, y2 - y1);
 		}
 		else
@@ -174,7 +180,8 @@ public class VizPanel extends JPanel
 			g.setColor(c);
 			g.fillRect(x1, y1, x2 - x1, y2 - y1);
 		}
-		
+
+/*		
         for(Integer tg : ver.tags)
         {
             int t = tg.intValue();
@@ -190,7 +197,7 @@ public class VizPanel extends JPanel
                 drawStar(g,x1+(x2-x1)/6,(y1+y2)/2,l);
             }
         }
-
+*/
         
         Font ff = new Font("Serif", Font.BOLD, Parameters.font.getSize());
 		if(!this.context)
@@ -202,18 +209,54 @@ public class VizPanel extends JPanel
 		else
 			g.setColor(Color.BLACK);
 
-		//Draw outline of boxes only in main window
-		//if(!this.context)
+		//Draw outline of boxes only in main window or in context for selected or highlighted vertices
+		if(this.context)
 		{
-			g.setStroke(new BasicStroke(1));
-			g.drawRect(x1, y1, x2 - x1, y2 - y1);
+            if(Parameters.vertexHighlight && (ver.isSelected() || ver.isChildSelected() || ver.isHighlighted() || ver.isChildHighlighted()))
+            {
+                g.setStroke(new BasicStroke(3));
+                g.drawRect(x1, y1, x2 - x1, y2 - y1);
+            }
 		}
+        else
+        {
+            g.setStroke(new BasicStroke(1));
+            if(Parameters.vertexHighlight && (ver.isSelected() || ver.isChildSelected() || ver.isHighlighted() || ver.isChildHighlighted()))
+                g.setStroke(new BasicStroke(3));
+            g.drawRect(x1, y1, x2 - x1, y2 - y1);
+        }
         
+        
+        if(Parameters.pingStart && ver.isSelected)
+        {
+            int width = x2-x1;
+            int height = y2-y1;
+            if(width>height)
+                height = width;
+            else
+                width = height;
+            
+            int x = (x1+x2)/2 - width;
+            int y = (y1+y2)/2 - height;
+            
+            g.setColor(Color.BLUE);
+            g.drawOval(x,y,2*width,2*height);
+            
+            if(Parameters.pingEnd)
+            {
+                if(this.context)
+                    Parameters.pingRespondedContext = true;
+                else
+                    Parameters.pingRespondedMain = true;
+                if(Parameters.pingRespondedMain && Parameters.pingRespondedContext)
+                    Parameters.pingStart = false;
+            }
+        }
         
         
 	}
     
-    
+    //not needed anymore
     public void drawStar(Graphics2D g, double x, double y, double l)
     {
         double root3 = Math.sqrt(3);
@@ -731,7 +774,9 @@ public class VizPanel extends JPanel
 		if(this.context)
 			this.contextPaint(g2);
 		else
+        {
 			this.vizPaint(g2);
+        }
 		
 		g.dispose();
 	}

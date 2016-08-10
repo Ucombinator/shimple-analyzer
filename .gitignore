@@ -1,13 +1,24 @@
+### Git, Editor, IDE, and OS files
+# Emacs
 *~
+# InteliJ IDEA
+.idea
+*.iml
+# Vim
+.*.sw?
+# Max OSX
+.DS_Store
+# Git
+*.orig
+
+### Compilation results
+*.class
 jars/*.jar
 !jars/sbt-launch.jar
 target
 project/target
 project/project/target
-.DS_Store
-sootOutput
-.*.sw?
-.idea
-*.iml
-*.class
+
+### Soot/jaam generated files
 *.jaam
+sootOutput

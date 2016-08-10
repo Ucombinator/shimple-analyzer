@@ -39,6 +39,7 @@ public class Vertex extends AbstractVertex
 		
 		this.isVisible = addC;
 		this.numChildrenHighlighted = 0;
+		this.numChildrenSelected = 0;
 
 		if(addC)
 		{
@@ -61,7 +62,7 @@ public class Vertex extends AbstractVertex
 	{
 		String str = "Regular Vertex (loop height = " + this.loopHeight + ")\n"
 				+ "id: " + this.id + "\n"
-				+ "instruction: " + this.getInstruction() + "\n"
+				+ "statement: " + this.getInstruction() + "\n"
 				+ "method: " + this.getMethodName() + "\n"
 				+ " location (left, right, top, bottom): "
 				+ this.left + ", " + this.right + ", " + this.top + ", " + this.bottom + "\n"
@@ -69,6 +70,14 @@ public class Vertex extends AbstractVertex
 		return str;
 	}
 	
+    public String getShortDescription()
+    {
+//        String str = this.id+": Regular Vertex\n        statement: " + this.getInstruction() + "\n";
+        String str = "<html>"+this.id+": Regular Vertex<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                    + "statement: " + Parameters.getHTMLVerbatim(this.getInstruction()) + "</html>";
+        return ""+str;
+    }
+    
 	public MethodVertex getMergeParent()
 	{
 		return this.mergeParent;
@@ -223,19 +232,19 @@ public class Vertex extends AbstractVertex
 		if(this.loopHeader != null)
 		{
 			Vertex header = this.loopHeader;
-			header.addHighlight(false, true, true);
+			header.addHighlight(false, false, true, true);
 			
 			for(Vertex v : header.loopChildren)
-				v.addHighlight(false, true, true);
+				v.addHighlight(false, false, true, true);
 		}
 		
 		//Otherwise try to highlight the loop that this vertex starts
 		else if(this.loopChildren.size() > 0)
 		{
-			this.addHighlight(false, true, true);
+			this.addHighlight(false, false, true, true);
 			
 			for(Vertex v : this.loopChildren)
-				v.addHighlight(false, true, true);
+				v.addHighlight(false, false, true, true);
 		}
 	}
 	

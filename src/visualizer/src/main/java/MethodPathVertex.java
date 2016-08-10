@@ -40,6 +40,15 @@ public class MethodPathVertex extends AbstractVertex
 		return s.toString();
 	}
 	
+    public String getShortDescription()
+    {
+//        String str = this.id+": Path Vertex\n"
+//                    +"        This contains " + this.mergeChildren.size() + " method vertices:\n";
+        String str = "<html>"+this.id+": Path Vertex<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
+                    + "This contains " + this.mergeChildren.size() + " method vertices</html>";
+        return ""+str;
+    }
+    
 	public AbstractVertex getMergeParent()
 	{
 		return null;

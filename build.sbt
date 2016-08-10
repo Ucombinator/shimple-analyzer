@@ -64,7 +64,9 @@ lazy val commonSettings = Seq(
 
   // Use shading to avoid file conflicts in some problematic dependencies
   assemblyShadeRules in assembly := Seq(
-    ShadeRule.rename("org.objectweb.**" -> "shaded-soot.@0")
+    ShadeRule.rename("org.objectweb.**" -> "shadedSoot.@0")
+      .inProject,
+    ShadeRule.rename("org.objectweb.**" -> "shadedSoot.@0")
       .inLibrary("org.ucombinator.soot" % "soot-all-in-one" % "nightly.20150205"),
     ShadeRule.rename("com.esotericsoftware.**" -> "shaded-kryo.@0")
       .inLibrary("com.esotericsoftware" % "kryo-shaded" % "3.0.3")
